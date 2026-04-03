@@ -18,10 +18,25 @@ def get_answer(query, role):
 
     db = Chroma(persist_directory="db", embedding_function=embedding)
 
-    docs = db.similarity_search(query, k=3)
+    docs = db.similarity_search(query, k=6)
 
-    # RBAC filter
+    # Apply RBAC
     docs = filter_docs(docs, role)
+
+    # 🔥 ADMIN SPECIAL HANDLING
+    if role == "admin":
+        # Separate admin docs
+        admin_docs = [d for d in docs if d.metadata.get("dept") == "admin"]
+
+        # If admin has relevant data → use ONLY admin docs
+        if admin_docs:
+            docs = admin_docs
+        else:
+            docs = docs
+
+    # 🚫 Remove conflicting HR statements for admin
+    if role == "admin":
+        docs = [d for d in docs if "confidential" not in d.page_content.lower()]
 
     if not docs:
         return "No access or no relevant data"
@@ -48,6 +63,10 @@ def get_answer(query, role):
         - Answer in a clear and professional way
         - Do NOT copy text directly
         - Summarize and explain if needed
+        - Use the most detailed and relevant information
+        - If multiple answers exist, prefer detailed data over generic statements
+        - Prefer specific numerical answers
+        - Do NOT say "confidential" if actual data is available
 
         Context:
         {context}

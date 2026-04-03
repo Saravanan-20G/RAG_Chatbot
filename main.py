@@ -3,7 +3,7 @@ from guardrails import check_query
 
 print("Simple RAG Chatbot 🔥")
 
-role = input("Enter your role (finance/hr/marketing): ").lower()
+role = input("Enter your role (finance/hr/marketing/admin/analyst): ").lower()
 
 while True:
     query = input("\nAsk a question: ")

@@ -1,8 +1,36 @@
 import streamlit as st
 from rag import get_answer
 from guardrails import check_query
-# from db import get_history
+from db import get_history, save_chat, login_user
 
+# 🔐 Login session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+# 🔐 LOGIN SCREEN
+if not st.session_state.logged_in:
+
+    st.markdown("## 🔐 Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        role = login_user(username, password)
+
+        if role:
+            st.session_state.logged_in = True
+            st.session_state.role = role
+            st.success(f"Welcome {username} ({role})")
+            st.rerun()
+        else:
+            st.error("Invalid credentials")
+
+    st.stop()
+    
 st.set_page_config(page_title="RAG Chatbot", layout="wide")
 
 st.markdown("""
@@ -129,7 +157,8 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Control Panel")
 
-    role = st.selectbox("👤 Select Role", ["finance", "hr", "marketing"])
+    role = st.session_state.role
+    st.success(f"Logged in as: {role}")
 
     st.markdown("---")
 
@@ -146,10 +175,31 @@ with st.sidebar:
     st.markdown("---")
 
     st.subheader("📜 Recent History")
+    history = get_history()
+    for row in history[:5]:
+        st.markdown(f"""
+        <div style="
+            background:#e0f2fe;
+            padding:8px;
+            border-radius:8px;
+            margin-bottom:6px;
+            font-size:13px;
+        ">
+        <b>{row[0]}</b>: {row[1]}
+        </div>
+        """, unsafe_allow_html=True)
+
     if st.button("Load History"):
         history = get_history()
         for row in history[-5:]:
             st.write(f"**{row[0]}**: {row[1]}")
+    
+    st.markdown("---")
+
+    if st.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.role = None
+        st.rerun()
 
 # 🎨 Tabs (Interactive UI)
 tab1, tab2 = st.tabs(["💬 Chat", "📊 Info"])
@@ -186,6 +236,9 @@ with tab1:
         else:
             with st.spinner("🤖 Thinking..."):
                 response = get_answer(user_input, role)
+
+                # 🔥 Save to DB
+                save_chat(role, user_input, response)
 
         st.markdown(f"<div class='chat-ai'>🤖 {response}</div>", unsafe_allow_html=True)
 

@@ -1,6 +1,5 @@
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_openai import ChatOpenAI
 from rbac import filter_docs
 import os
 from dotenv import load_dotenv

@@ -3,6 +3,6 @@ langchain
 langchain-community
 chromadb
 sentence-transformers
-groq
+langchain-groq
 python-dotenv
 tiktoken

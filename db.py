@@ -1,4 +1,4 @@
-import sqlite3
+import pysqlite3 as sqlite3
 
 conn = sqlite3.connect("chat.db", check_same_thread=False)
 cursor = conn.cursor()

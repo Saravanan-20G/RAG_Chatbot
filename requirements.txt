@@ -5,5 +5,4 @@ chromadb
 sentence-transformers
 groq
 python-dotenv
-sqlite3
 tiktoken

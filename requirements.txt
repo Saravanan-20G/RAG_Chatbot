@@ -5,4 +5,5 @@ chromadb
 sentence-transformers
 langchain-groq
 python-dotenv
+sqlite3
 tiktoken

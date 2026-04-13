@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 
 # Use Groq via OpenAI-compatible API
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 
 
 chat_history = []
@@ -47,7 +47,7 @@ def get_answer(query, role):
 
     api_key = os.getenv("GROQ_API_KEY")
 
-    llm = ChatOpenAI(
+    llm = ChatGroq(
         base_url="https://api.groq.com/openai/v1",
         api_key=api_key,
         model="llama-3.3-70b-versatile",

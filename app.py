@@ -1,6 +1,13 @@
 import streamlit as st
 from rag import get_answer
 from guardrails import check_query
+from db import init_db, create_user
+
+init_db()
+
+# 🔥 RUN ONLY ONCE
+create_user("admin_user", "1234562", "admin")
+
 from db import get_history, save_chat, login_user
 
 # 🔐 Login session state

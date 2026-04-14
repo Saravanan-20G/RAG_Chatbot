@@ -85,7 +85,7 @@ def login_user(username, password):
     result = cur.fetchone()
     cur.close()
 
-    return result["role"] if result else None
+    return result[0] if result else None
 
 
 # -----------------------------

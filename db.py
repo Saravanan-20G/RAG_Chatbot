@@ -1,5 +1,12 @@
-import streamlit as st
 import psycopg2
+import streamlit as st
+
+try:
+    conn = psycopg2.connect(st.secrets["DATABASE_URL"])
+    st.success("✅ DB Connected Successfully")
+except Exception as e:
+    st.error(f"❌ DB Connection Failed: {e}")
+    
 from psycopg2.extras import RealDictCursor
 
 # -----------------------------
@@ -7,15 +14,13 @@ from psycopg2.extras import RealDictCursor
 # -----------------------------
 @st.cache_resource
 def get_connection():
-    return psycopg2.connect(
-        st.secrets["DATABASE_URL"],
-        sslmode="require"
+    return psycopg2.connect(st.secrets["DATABASE_URL"]
     )
 
 
 def get_cursor():
     conn = get_connection()
-    return conn.cursor(cursor_factory=RealDictCursor)
+    return conn.cursor()
 
 
 # -----------------------------

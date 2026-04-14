@@ -57,7 +57,7 @@ def create_user(username, password, role):
 # 🔑 Login check
 def login_user(username, password):
     cursor.execute(
-        "SELECT role FROM users WHERE username=? AND password=?",
+        "SELECT role FROM users WHERE username=%s AND password=%s",
         (username, password)
     )
     result = cursor.fetchone()

@@ -59,17 +59,17 @@ def create_user(username, password, role):
     conn = get_connection()
     cur = conn.cursor()
 
-    try:
-        cur.execute(
-            "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-            (username, password, role)
-        )
-        conn.commit()
-    except psycopg2.errors.UniqueViolation:
-        conn.rollback()  # prevent crash if user exists
+    cur.execute(
+        """
+        INSERT INTO users (username, password, role)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (username) DO NOTHING
+        """,
+        (username, password, role)
+    )
 
+    conn.commit()
     cur.close()
-
 
 # -----------------------------
 # 🔐 LOGIN USER

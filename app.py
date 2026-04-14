@@ -1,7 +1,7 @@
 import streamlit as st
 from rag import get_answer
 from guardrails import check_query
-from db import init_db, create_user
+from db import get_history, save_chat, login_user, create_user, init_db
 
 init_db()
 
@@ -18,26 +18,53 @@ if "role" not in st.session_state:
     st.session_state.role = None
 
 # 🔐 LOGIN SCREEN
+# 🔐 Login session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+# 🔐 LOGIN / SIGNUP SCREEN
 if not st.session_state.logged_in:
+    st.markdown("## 🔐 Welcome")
 
-    st.markdown("## 🔐 Login")
+    tab1, tab2 = st.tabs(["🔐 Login", "🆕 Signup"])
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    with tab1:
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
 
-    if st.button("Login"):
-        role = login_user(username, password)
+        if st.button("Login"):
+            role = login_user(username, password)
 
-        if role:
-            st.session_state.logged_in = True
-            st.session_state.role = role
-            st.success(f"Welcome {username} ({role})")
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
+            if role:
+                st.session_state.logged_in = True
+                st.session_state.role = role
+                st.success(f"Welcome {username} ({role})")
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+
+    with tab2:
+        st.subheader("Create New Account")
+
+        new_user = st.text_input("New Username", key="signup_username")
+        new_pass = st.text_input("New Password", type="password", key="signup_password")
+        new_role = st.selectbox("Select Role", ["finance", "hr", "marketing", "analyst"])
+
+        if st.button("Signup"):
+            if not new_user or not new_pass:
+                st.error("Fill all fields")
+            else:
+                success = create_user(new_user, new_pass, new_role)
+
+                if success:
+                    st.success("Account created successfully. Please login.")
+                else:
+                    st.error("Username already exists or signup failed.")
 
     st.stop()
-    
 st.set_page_config(page_title="RAG Chatbot", layout="wide")
 
 st.markdown("""

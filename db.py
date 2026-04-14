@@ -1,11 +1,21 @@
+import streamlit as st
 import psycopg2
 
 conn = psycopg2.connect(
-    host="localhost",
-    database="project_rag",
-    user="postgres",
-    password="Saran@123"
+    host=st.secrets["localhost"],
+    database=st.secrets["project_rag"],
+    user=st.secrets["postgres"],
+    password=st.secrets["Saran@123"],
+    port=st.secrets["5432"]
 )
+# import psycopg2
+
+# conn = psycopg2.connect(
+#     host="localhost",
+#     database="project_rag",
+#     user="postgres",
+#     password="Saran@123"
+# )
 
 cursor = conn.cursor()
 

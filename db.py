@@ -1,158 +1,118 @@
 import streamlit as st
 import psycopg2
+from psycopg2.extras import RealDictCursor
 
-conn = psycopg2.connect(
-    host=st.secrets["localhost"],
-    database=st.secrets["project_rag"],
-    user=st.secrets["postgres"],
-    password=st.secrets["Saran@123"],
-    port=st.secrets["5432"]
-)
-# import psycopg2
-
-# conn = psycopg2.connect(
-#     host="localhost",
-#     database="project_rag",
-#     user="postgres",
-#     password="Saran@123"
-# )
-
-cursor = conn.cursor()
-
-# Create users table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    username TEXT UNIQUE,
-    password TEXT,
-    role TEXT
-);
-""")
-
-conn.commit()
-
-# Create chat history table
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS chat_history (
-    role TEXT,
-    question TEXT,
-    answer TEXT
-)
-""")
-
-conn.commit()
-
-# ➕ Add user
-def create_user(username, password, role):
-    cursor.execute(
-        "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
-        (username, password, role)
+# -----------------------------
+# 🔌 DB CONNECTION (Neon via URL)
+# -----------------------------
+@st.cache_resource
+def get_connection():
+    return psycopg2.connect(
+        st.secrets["DATABASE_URL"],
+        sslmode="require"
     )
+
+
+def get_cursor():
+    conn = get_connection()
+    return conn.cursor(cursor_factory=RealDictCursor)
+
+
+# -----------------------------
+# 🏗️ INIT TABLES (RUN ON START)
+# -----------------------------
+def init_db():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL
+    );
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS chat_history (
+        id SERIAL PRIMARY KEY,
+        role TEXT,
+        question TEXT,
+        answer TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     conn.commit()
+    cur.close()
 
-# 🔑 Login
+
+# -----------------------------
+# 👤 CREATE USER
+# -----------------------------
+def create_user(username, password, role):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            "INSERT INTO users (username, password, role) VALUES (%s, %s, %s)",
+            (username, password, role)
+        )
+        conn.commit()
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()  # prevent crash if user exists
+
+    cur.close()
+
+
+# -----------------------------
+# 🔐 LOGIN USER
+# -----------------------------
 def login_user(username, password):
-    cursor.execute("SELECT * FROM users")
-    print("All users:", cursor.fetchall())  # DEBUG
+    cur = get_cursor()
 
-    cursor.execute(
-        "SELECT role FROM users WHERE username=? AND password=?",
+    cur.execute(
+        "SELECT role FROM users WHERE username=%s AND password=%s",
         (username, password)
     )
-    result = cursor.fetchone()
-    return result[0] if result else None
+
+    result = cur.fetchone()
+    cur.close()
+
+    return result["role"] if result else None
 
 
-# def login_user(username, password):
-#     cursor.execute(
-#         "SELECT role FROM users WHERE username=%s AND password=%s",
-#         (username, password)
-#     )
-#     result = cursor.fetchone()
-#     return result[0] if result else None
-
+# -----------------------------
+# 💾 SAVE CHAT
+# -----------------------------
 def save_chat(role, question, answer):
-    cursor.execute(
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute(
         "INSERT INTO chat_history (role, question, answer) VALUES (%s, %s, %s)",
         (role, question, answer)
     )
+
     conn.commit()
-
-def get_history():
-    cursor.execute("""
-        SELECT role, question, answer 
-        FROM chat_history 
-    """)
-    return cursor.fetchall()
+    cur.close()
 
 
+# -----------------------------
+# 📜 GET HISTORY
+# -----------------------------
+def get_history(limit=20):
+    cur = get_cursor()
 
+    cur.execute("""
+        SELECT role, question, answer, created_at
+        FROM chat_history
+        ORDER BY created_at DESC
+        LIMIT %s
+    """, (limit,))
 
-# import psycopg2
+    results = cur.fetchall()
+    cur.close()
 
-# conn = psycopg2.connect(
-#     host="localhost",
-#     database="project_rag",
-#     user="postgres",
-#     password="Saran@123"
-# )
-
-# cursor = conn.cursor()
-# # Create table
-# cursor.execute("""
-# CREATE TABLE IF NOT EXISTS chat_history (
-#     id INTEGER PRIMARY KEY ,
-#     role TEXT,
-#     question TEXT,
-#     answer TEXT
-    
-# )
-# """)
-
-# conn.commit()
-
-# # Save chat
-# def save_chat(role, question, answer):
-#     cursor.execute(
-#         "INSERT INTO chat_history (role, question, answer) VALUES (?, ?, ?)",
-#         (role, question, answer)
-#     )
-#     conn.commit()
-
-# # Get history
-# def get_history():
-#     cursor.execute("""
-#     SELECT role, question, answer, timestamp 
-#     FROM chat_history 
-#     ORDER BY id DESC
-#     """)
-#     return cursor.fetchall()
-
-
-# # 🔐 Create users table
-# cursor.execute("""
-# CREATE TABLE IF NOT EXISTS users (
-#     id INTEGER PRIMARY KEY ,
-#     username TEXT UNIQUE,
-#     password TEXT,
-#     role TEXT
-# )
-# """)
-
-# conn.commit()
-
-# # ➕ Add user
-# def create_user(username, password, role):
-#     cursor.execute(
-#         "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-#         (username, password, role)
-#     )
-#     conn.commit()
-
-# # 🔑 Login check
-# def login_user(username, password):
-#     cursor.execute(
-#         "SELECT role FROM users WHERE username=? AND password=?",
-#         (username, password)
-#     )
-#     result = cursor.fetchone()
-#     return result[0] if result else None
+    return results

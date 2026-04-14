@@ -5,5 +5,5 @@ chromadb
 sentence-transformers
 langchain-groq
 python-dotenv
-pysqlite3-binary
+psycopg2-binary
 tiktoken

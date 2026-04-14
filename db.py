@@ -1,14 +1,8 @@
 import psycopg2
 import streamlit as st
 
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-DATABASE_URL = os.getenv(""postgresql://neondb_owner:npg_tnSKu1i6fejW@ep-restless-frost-anf7rlst-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require"") 
-
-psycopg2.connect(DATABASE_URL)
+conn = psycopg2.connect(st.secrets["DATABASE_URL"])
 
 try:
     conn = psycopg2.connect(st.secrets["DATABASE_URL"])

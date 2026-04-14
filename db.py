@@ -1,34 +1,16 @@
-import psycopg2
 import streamlit as st
+import psycopg2
+import hashlib
 
-
-conn = psycopg2.connect(st.secrets["DATABASE_URL"])
-
-try:
-    conn = psycopg2.connect(st.secrets["DATABASE_URL"])
-    st.success("✅ DB Connected Successfully")
-except Exception as e:
-    st.error(f"❌ DB Connection Failed: {e}")
-    
-from psycopg2.extras import RealDictCursor
-
-# -----------------------------
-# 🔌 DB CONNECTION (Neon via URL)
-# -----------------------------
 @st.cache_resource
 def get_connection():
-    return psycopg2.connect(st.secrets["DATABASE_URL"]
-    )
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
 
 
-def get_cursor():
-    conn = get_connection()
-    return conn.cursor()
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
-# -----------------------------
-# 🏗️ INIT TABLES (RUN ON START)
-# -----------------------------
 def init_db():
     conn = get_connection()
     cur = conn.cursor()
@@ -55,34 +37,40 @@ def init_db():
     cur.close()
 
 
-# -----------------------------
-# 👤 CREATE USER
-# -----------------------------
 def create_user(username, password, role):
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute(
-        """
-        INSERT INTO users (username, password, role)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (username) DO NOTHING
-        """,
-        (username, password, role)
-    )
+    hashed_password = hash_password(password)
 
-    conn.commit()
-    cur.close()
+    try:
+        cur.execute(
+            """
+            INSERT INTO users (username, password, role)
+            VALUES (%s, %s, %s)
+            """,
+            (username, hashed_password, role)
+        )
+        conn.commit()
+        return True
 
-# -----------------------------
-# 🔐 LOGIN USER
-# -----------------------------
+    except Exception:
+        conn.rollback()
+        return False
+
+    finally:
+        cur.close()
+
+
 def login_user(username, password):
-    cur = get_cursor()
+    conn = get_connection()
+    cur = conn.cursor()
+
+    hashed_password = hash_password(password)
 
     cur.execute(
         "SELECT role FROM users WHERE username=%s AND password=%s",
-        (username, password)
+        (username, hashed_password)
     )
 
     result = cur.fetchone()
@@ -91,9 +79,6 @@ def login_user(username, password):
     return result[0] if result else None
 
 
-# -----------------------------
-# 💾 SAVE CHAT
-# -----------------------------
 def save_chat(role, question, answer):
     conn = get_connection()
     cur = conn.cursor()
@@ -107,11 +92,9 @@ def save_chat(role, question, answer):
     cur.close()
 
 
-# -----------------------------
-# 📜 GET HISTORY
-# -----------------------------
 def get_history(limit=20):
-    cur = get_cursor()
+    conn = get_connection()
+    cur = conn.cursor()
 
     cur.execute("""
         SELECT role, question, answer, created_at
@@ -120,7 +103,17 @@ def get_history(limit=20):
         LIMIT %s
     """, (limit,))
 
-    results = cur.fetchall()
+    rows = cur.fetchall()
     cur.close()
+    return rows
 
-    return results
+
+def get_all_users():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT username, role FROM users")
+    rows = cur.fetchall()
+
+    cur.close()
+    return rows
